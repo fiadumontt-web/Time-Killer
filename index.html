@@ -391,6 +391,7 @@ $('revealQ').onclick = () => {
 
 function choose(side) {
   if (!state.revealed || state.stage !== 0) return;
+  if (!running && state.stageTimes[0] === null) { $('resultLine').textContent = 'Press Go first ▶'; return; }
   state.choice = side;
   $('sideA').classList.toggle('chosen', side === 'A'); $('sideB').classList.toggle('chosen', side === 'B');
   checkNext();
