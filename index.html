@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIME KILLER · Beat the clock</title>
+<style>
+  :root {
+    --bg: #0b0f1a; --card: #161d2e; --line: #2a3550; --text: #f5f7fb; --muted: #8e9bb8;
+    --red: #ef3b3b; --white: #ffffff; --a: #38bdf8; --b: #f472b6; --ok: #4ade80; --gold: #facc15;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(circle at 50% 0%, #1a2340 0%, var(--bg) 60%); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .muted { color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+  button { font: inherit; border: 0; border-radius: 12px; padding: 12px 18px; cursor: pointer; font-weight: 700; }
+  .btn { background: var(--red); color: #fff; }
+  .btn.blue { background: var(--a); color: #0b0f1a; }
+  .btn.pink { background: var(--b); color: #0b0f1a; }
+  .btn.gold { background: var(--gold); color: #0b0f1a; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn.big { font-size: 22px; padding: 16px 28px; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  input, textarea { font: inherit; background: #0a0e18; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; }
+  label { display: block; margin: 14px 0 6px; font-weight: 700; }
+  .hidden { display: none !important; }
+  .brand { font-weight: 900; letter-spacing: 2px; }
+  .brand span { color: var(--red); }
+
+  /* INTRO */
+  #intro { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; background: var(--bg); z-index: 50; cursor: pointer; }
+  .disc { width: 220px; height: 220px; border-radius: 50%; position: relative; background: conic-gradient(var(--red) 0 30deg, var(--white) 30deg 60deg, var(--red) 60deg 90deg, var(--white) 90deg 120deg, var(--red) 120deg 150deg, var(--white) 150deg 180deg, var(--red) 180deg 210deg, var(--white) 210deg 240deg, var(--red) 240deg 270deg, var(--white) 270deg 300deg, var(--red) 300deg 330deg, var(--white) 330deg 360deg); box-shadow: 0 0 60px rgba(239,59,59,.55); animation: spin 2.4s cubic-bezier(.5,0,.2,1) infinite, pulse 1.2s ease-in-out infinite; }
+  .disc::before { content: ''; position: absolute; inset: 34px; border-radius: 50%; background: var(--bg); border: 6px solid var(--white); }
+  .disc .hand { position: absolute; left: 50%; top: 50%; width: 6px; height: 70px; background: var(--red); border-radius: 3px; transform-origin: 50% 0; transform: translate(-50%, 0) rotate(180deg); animation: tick 1s steps(12) infinite; }
+  .disc .dot { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: var(--red); transform: translate(-50%, -50%); border: 4px solid var(--white); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes tick { to { transform: translate(-50%, 0) rotate(540deg); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 100px rgba(239,59,59,.9); } }
+  .intro-title { font-size: clamp(44px, 9vw, 96px); animation: zoomIn 1.2s ease-out both; }
+  .intro-sub { font-size: 20px; color: var(--muted); animation: fadeUp 1.5s .6s ease-out both; }
+  .intro-tap { font-size: 16px; color: var(--white); padding: 10px 20px; border: 2px solid var(--red); border-radius: 999px; animation: blink 1.2s infinite; }
+  @keyframes zoomIn { from { transform: scale(3); opacity: 0; filter: blur(8px); } to { transform: scale(1); opacity: 1; filter: none; } }
+  @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } }
+  @keyframes blink { 50% { opacity: .3; } }
+  #intro.leave { animation: leave .7s ease-in forwards; }
+  @keyframes leave { to { transform: scale(1.4); opacity: 0; } }
+
+  /* HOME */
+  .home-hero { text-align: center; padding: 30px 10px 10px; }
+  .home-hero h1 { font-size: 56px; margin: 0; }
+  .home-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 20px; }
+
+  /* ROUND */
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .pill { background: #0a0e18; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 700; }
+  .score { color: var(--gold); }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; }
+  .levels button { background: #0a0e18; color: var(--text); border: 1px solid var(--line); }
+  .levels button.on { background: var(--gold); color: #0b0f1a; border-color: var(--gold); }
+  .arena { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; }
+  .side { perspective: 900px; min-height: 270px; cursor: pointer; }
+  .flip { position: relative; width: 100%; height: 100%; min-height: 270px; transition: transform .7s; transform-style: preserve-3d; }
+  .side.open .flip { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; backface-visibility: hidden; border: 3px solid transparent; }
+  .face.front { background: repeating-linear-gradient(45deg, #1d2740 0 14px, #18213a 14px 28px); font-size: 90px; font-weight: 900; color: var(--line); }
+  .face.back { transform: rotateY(180deg); }
+  .side.a .back { background: rgba(56,189,248,.14); }
+  .side.b .back { background: rgba(244,114,182,.14); }
+  .side.a.chosen .back { border-color: var(--a); box-shadow: 0 0 30px rgba(56,189,248,.4); }
+  .side.b.chosen .back { border-color: var(--b); box-shadow: 0 0 30px rgba(244,114,182,.4); }
+  .opt { font-size: 40px; font-weight: 900; word-break: break-word; }
+  .tag { margin-top: 10px; font-size: 14px; color: var(--muted); }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  .timer { font-size: 76px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .timer.hit { color: var(--ok); text-shadow: 0 0 24px rgba(74,222,128,.5); }
+  .bar { position: relative; width: 100%; height: 18px; background: #0a0e18; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--red); transition: width .2s linear; }
+  .fill.hit { background: var(--ok); }
+  .goal { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--gold); }
+  .controls { display: flex; gap: 10px; }
+  .lower { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 16px; }
+  .check { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 10px; background: #0a0e18; margin-bottom: 8px; cursor: pointer; user-select: none; }
+  .check input { width: 22px; height: 22px; accent-color: var(--ok); }
+  .check .pts { color: var(--gold); font-weight: 800; }
+  .result-line { font-size: 18px; margin: 10px 0; min-height: 26px; }
+
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 20; }
+  .modal { width: min(420px, 92vw); }
+
+  /* FINAL */
+  .final-hero { text-align: center; padding: 30px 20px; position: relative; overflow: hidden; }
+  .final-total { font-size: 110px; font-weight: 900; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+  .final-title { font-size: 34px; font-weight: 900; margin-top: 10px; }
+  .gift { font-size: 110px; display: inline-block; margin-top: 16px; cursor: pointer; }
+  .gift.shake { animation: shake .12s infinite; }
+  @keyframes shake { 0% { transform: rotate(-12deg) scale(1.05); } 50% { transform: rotate(12deg) scale(1.15); } 100% { transform: rotate(-12deg) scale(1.05); } }
+  .gift.boom { animation: boom .5s forwards; }
+  @keyframes boom { to { transform: scale(3); opacity: 0; } }
+  .bonus-pop { font-size: 64px; font-weight: 900; color: var(--gold); text-shadow: 0 0 30px rgba(250,204,21,.7); animation: pop .7s cubic-bezier(.2,1.6,.4,1) both; }
+  .bonus-msg { font-size: 24px; margin-top: 8px; animation: fadeUp .8s .3s both; }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+  .drum { font-size: 22px; color: var(--muted); margin-top: 10px; min-height: 30px; }
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); }
+  .kbd { font-size: 12px; color: var(--muted); }
+  .lock { font-size: 14px; }
+  @media (max-width: 860px) { .arena, .lower, .home-grid { grid-template-columns: 1fr; } .timer { font-size: 56px; } }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="disc"><div class="hand"></div><div class="dot"></div></div>
+  <div class="intro-title brand">TIME <span>KILLER</span></div>
+  <div class="intro-sub">Beat the clock. Win the argument.</div>
+  <div class="intro-tap">Tap to start</div>
+</div>
+
+<div class="wrap">
+
+  <!-- HOME -->
+  <section id="home" class="hidden">
+    <div class="home-hero">
+      <h1 class="brand">TIME <span>KILLER</span></h1>
+      <p class="muted">Choose a side. Defend it. Beat the clock.</p>
+    </div>
+    <div class="home-grid">
+      <div class="card">
+        <label for="playerName">Player name</label>
+        <input id="playerName" value="Maksym">
+        <p class="muted">Rules: two options appear. Pick one and explain why. Easy = speak 30 s, Medium = 1 min, Hard = 1:30. Say "Go" to start and "Done" when you finish.</p>
+        <button class="btn big" id="startGame" style="margin-top:8px">Start game ▶</button>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column; gap:12px">
+        <strong>Menu</strong>
+        <button class="btn ghost" id="openHistory">📅 Results history</button>
+        <button class="btn ghost" id="openAdmin">🔒 Teacher zone</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="admin" class="hidden">
+    <div class="topbar"><h2 class="brand" style="margin:0">🔒 Teacher zone</h2><button class="btn ghost" id="adminBack">← Back</button></div>
+    <div class="card" id="adminGate">
+      <label for="adminPass">Password</label>
+      <input id="adminPass" type="password" autocomplete="off">
+      <div class="result-line" id="adminErr" style="color:var(--red)"></div>
+      <button class="btn" id="adminEnter">Enter</button>
+    </div>
+    <div class="card hidden" id="adminPanel">
+      <label for="pairs">Questions (one per line, two options separated by | )</label>
+      <textarea id="pairs" rows="12"></textarea>
+      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
+        <button class="btn" id="savePairs">Save questions</button>
+        <button class="btn ghost" id="clearHistory">Delete results history</button>
+      </div>
+      <div class="result-line" id="adminMsg"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="hidden">
+    <div class="topbar"><h2 class="brand" style="margin:0">📅 Results history</h2><button class="btn ghost" id="historyBack">← Back</button></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Date</th><th>Player</th><th>Rounds</th><th>Avg. speaking time</th><th>Bonus</th><th>Total</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <p class="muted" id="historyEmpty">No games yet.</p>
+    </div>
+  </section>
+
+  <!-- ROUND -->
+  <section id="round" class="hidden">
+    <div class="topbar">
+      <div class="pill" id="roundInfo">Round 1</div>
+      <div class="levels" id="levels">
+        <button data-level="easy">Easy · 0:30</button>
+        <button data-level="medium">Medium · 1:00</button>
+        <button data-level="hard">Hard · 1:30</button>
+      </div>
+      <div class="pill"><span id="playerLabel">Maksym</span> · <span class="score" id="scoreLabel">0 pts</span></div>
+    </div>
+
+    <div class="arena">
+      <div class="side a" id="sideA"><div class="flip"><div class="face front">?</div><div class="face back"><div class="opt" id="optA"></div><div class="tag">Click to choose</div></div></div></div>
+      <div class="center card">
+        <button class="btn gold big" id="revealQ">Reveal question 🎲</button>
+        <div class="timer" id="timer">0:00</div>
+        <div class="bar"><div class="fill" id="fill"></div><div class="goal" id="goalMark"></div></div>
+        <div class="muted" id="goalLabel">Goal: 0:30</div>
+        <div class="controls">
+          <button class="btn blue big" id="startBtn" disabled>Go ▶</button>
+          <button class="btn pink big" id="stopBtn" disabled>Done ■</button>
+        </div>
+        <button class="btn ghost" id="resetBtn">Reset timer</button>
+        <div class="kbd">Space bar = Go / Done</div>
+      </div>
+      <div class="side b" id="sideB"><div class="flip"><div class="face front">?</div><div class="face back"><div class="opt" id="optB"></div><div class="tag">Click to choose</div></div></div></div>
+    </div>
+
+    <div class="lower">
+      <div class="card">
+        <strong>Checklist</strong> <span class="muted">(after the player finishes)</span>
+        <div class="result-line" id="resultLine"></div>
+        <label class="check"><span>Reached the time goal</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-time"></span></label>
+        <label class="check"><span>Used "because" or "for example"</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
+        <label class="check"><span>No Polish</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-polish"></span></label>
+        <label class="check"><span>Answered my challenge</span><span><span class="pts">+2</span> <input type="checkbox" id="ck-challenge"></span></label>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column; gap:12px; justify-content:space-between">
+        <div><strong>This round</strong><div class="result-line">Points: <span class="score" id="roundPts">0</span></div></div>
+        <button class="btn gold" id="bonusBtn">Teacher's note 🎁</button>
+        <button class="btn big" id="nextBtn">Save &amp; next round ➜</button>
+        <button class="btn ghost" id="finishBtn">Finish game &amp; show results</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="final" class="hidden">
+    <div class="card final-hero">
+      <div class="muted" id="finalName">Maksym</div>
+      <div class="final-total" id="finalTotal">0</div>
+      <div class="muted">points</div>
+      <div class="final-title" id="finalTitle"></div>
+      <div id="giftZone">
+        <div class="gift" id="gift" title="Open">🎁</div>
+        <div class="drum" id="drum">Teacher's note… click the gift!</div>
+      </div>
+      <div id="bonusZone"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <strong>Speaking time per round</strong>
+      <svg id="chart" viewBox="0 0 700 240" style="width:100%; height:auto; margin-top:10px"></svg>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <strong>Rounds</strong>
+      <table>
+        <thead><tr><th>#</th><th>Question</th><th>Choice</th><th>Level</th><th>Time</th><th>Points</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+      <p id="bestRound" style="margin-top:14px"></p>
+      <button class="btn ghost" id="toHome" style="margin-top:6px">Back to menu</button>
+    </div>
+  </section>
+</div>
+
+<!-- BONUS MODAL (values are masked) -->
+<div class="modal-bg hidden" id="bonusModal">
+  <div class="card modal">
+    <strong>Teacher's note 🎁</strong>
+    <p class="muted" style="margin:6px 0 0">Secret. Type the extra points (0 to 20) and an optional message. Both stay hidden.</p>
+    <label for="bonusPts">Points</label>
+    <input id="bonusPts" type="password" inputmode="numeric" autocomplete="off">
+    <label for="bonusMsg">Secret message</label>
+    <input id="bonusMsg" type="password" autocomplete="off">
+    <div class="result-line" id="bonusErr" style="color:var(--red)"></div>
+    <div style="display:flex; gap:10px; justify-content:flex-end">
+      <button class="btn ghost" id="bonusCancel">Cancel</button>
+      <button class="btn gold" id="bonusSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PASSWORD = 'Fiadumont';
+const LEVELS = { easy: { label: 'Easy', goal: 30 }, medium: { label: 'Medium', goal: 60 }, hard: { label: 'Hard', goal: 90 } };
+const DEFAULT_PAIRS = 'Messi | Ronaldo\nFootball | Basketball\nPlayStation | Xbox\nTikTok | YouTube\nPizza | Burger\nSummer | Winter\nBig city | Small town\nMovies | Series';
+const $ = id => document.getElementById(id);
+
+function load(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { return false; } }
+
+let questionsText = load('tk_questions', DEFAULT_PAIRS);
+let state = null, timerId = null, startAt = 0, elapsed = 0, running = false;
+
+function fmt(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function parsePairs(t) { return t.split('\n').map(l => l.split('|').map(x => x.trim())).filter(p => p.length >= 2 && p[0] && p[1]).map(p => [p[0], p[1]]); }
+function show(id) { ['home', 'admin', 'history', 'round', 'final'].forEach(s => $(s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); }
+
+/* INTRO */
+$('intro').onclick = () => { $('intro').classList.add('leave'); setTimeout(() => { $('intro').classList.add('hidden'); show('home'); }, 650); };
+
+/* ADMIN */
+$('openAdmin').onclick = () => { $('adminGate').classList.remove('hidden'); $('adminPanel').classList.add('hidden'); $('adminPass').value = ''; $('adminErr').textContent = ''; show('admin'); setTimeout(() => $('adminPass').focus(), 50); };
+$('adminBack').onclick = () => show('home');
+function enterAdmin() {
+  if ($('adminPass').value === PASSWORD) {
+    $('adminGate').classList.add('hidden'); $('adminPanel').classList.remove('hidden');
+    $('pairs').value = questionsText; $('adminMsg').textContent = '';
+  } else { $('adminErr').textContent = 'Wrong password'; }
+}
+$('adminEnter').onclick = enterAdmin;
+$('adminPass').addEventListener('keydown', e => { if (e.key === 'Enter') enterAdmin(); });
+$('savePairs').onclick = () => {
+  const n = parsePairs($('pairs').value).length;
+  if (!n) { $('adminMsg').textContent = 'Add at least one line, like: Messi | Ronaldo'; return; }
+  questionsText = $('pairs').value; save('tk_questions', questionsText);
+  $('adminMsg').textContent = `✅ Saved ${n} questions.`;
+};
+$('clearHistory').onclick = () => { save('tk_history', []); $('adminMsg').textContent = '✅ History deleted.'; };
+
+/* HISTORY */
+$('openHistory').onclick = () => {
+  const h = load('tk_history', []);
+  const body = $('historyBody'); body.innerHTML = '';
+  h.slice().reverse().forEach(g => {
+    const tr = document.createElement('tr');
+    [new Date(g.date).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), g.name, g.rounds, fmt(g.avgTime), '+' + g.bonus, g.total].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    body.appendChild(tr);
+  });
+  $('historyEmpty').classList.toggle('hidden', h.length > 0);
+  show('history');
+};
+$('historyBack').onclick = () => show('home');
+
+/* GAME */
+$('startGame').onclick = () => {
+  const pairs = parsePairs(questionsText);
+  state = { name: $('playerName').value.trim() || 'Player', pairs, idx: 0, level: 'easy', choice: null, revealed: false, rounds: [], bonus: 0, bonusMsg: '' };
+  $('playerLabel').textContent = state.name;
+  $('bonusBtn').textContent = "Teacher's note 🎁";
+  loadRound(); show('round');
+};
+
+function loadRound() {
+  resetTimer();
+  state.choice = null; state.revealed = false;
+  ['sideA', 'sideB'].forEach(id => $(id).classList.remove('open', 'chosen'));
+  $('optA').textContent = ''; $('optB').textContent = '';
+  $('revealQ').classList.remove('hidden');
+  $('startBtn').disabled = true;
+  ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach(id => $(id).checked = false);
+  $('resultLine').textContent = '';
+  $('roundInfo').textContent = `Round ${state.idx + 1} of ${state.pairs.length}`;
+  $('nextBtn').textContent = state.idx + 1 >= state.pairs.length ? 'Save & show results ➜' : 'Save & next round ➜';
+  setLevel(state.level); updatePoints();
+}
+
+$('revealQ').onclick = () => {
+  const [a, b] = state.pairs[state.idx];
+  $('optA').textContent = a; $('optB').textContent = b;
+  $('sideA').classList.add('open');
+  setTimeout(() => $('sideB').classList.add('open'), 250);
+  state.revealed = true; $('revealQ').classList.add('hidden'); $('startBtn').disabled = false;
+};
+
+function setLevel(lv) {
+  state.level = lv;
+  document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('on', b.dataset.level === lv));
+  $('goalLabel').textContent = 'Goal: ' + fmt(LEVELS[lv].goal); drawTimer();
+}
+document.querySelectorAll('#levels button').forEach(b => b.onclick = () => setLevel(b.dataset.level));
+
+function choose(side) {
+  if (!state.revealed) return;
+  state.choice = side;
+  $('sideA').classList.toggle('chosen', side === 'A'); $('sideB').classList.toggle('chosen', side === 'B');
+}
+$('sideA').onclick = () => choose('A'); $('sideB').onclick = () => choose('B');
+
+function drawTimer() {
+  const g = LEVELS[state ? state.level : 'easy'].goal, scale = g * 1.5, hit = elapsed >= g;
+  $('timer').textContent = fmt(elapsed); $('timer').classList.toggle('hit', hit);
+  $('fill').style.width = Math.min(100, elapsed / scale * 100) + '%'; $('fill').classList.toggle('hit', hit);
+  $('goalMark').style.left = (g / scale * 100) + '%';
+}
+function startTimer() {
+  if (running || !state.revealed) return;
+  running = true; startAt = performance.now() - elapsed * 1000;
+  timerId = setInterval(() => { elapsed = (performance.now() - startAt) / 1000; drawTimer(); }, 100);
+  $('startBtn').disabled = true; $('stopBtn').disabled = false; $('resultLine').textContent = '';
+}
+function stopTimer() {
+  if (!running) return;
+  running = false; clearInterval(timerId); elapsed = (performance.now() - startAt) / 1000; drawTimer();
+  $('startBtn').disabled = false; $('stopBtn').disabled = true;
+  const g = LEVELS[state.level].goal, hit = elapsed >= g;
+  $('ck-time').checked = hit;
+  $('resultLine').textContent = hit ? `✅ ${fmt(elapsed)} · Goal reached!` : `⏱️ ${fmt(elapsed)} · ${fmt(g - elapsed)} short of the goal`;
+  updatePoints();
+}
+function resetTimer() { running = false; clearInterval(timerId); elapsed = 0; $('stopBtn').disabled = true; if (state && state.revealed) $('startBtn').disabled = false; drawTimer(); }
+$('startBtn').onclick = startTimer; $('stopBtn').onclick = stopTimer;
+$('resetBtn').onclick = () => { resetTimer(); $('resultLine').textContent = ''; $('ck-time').checked = false; updatePoints(); };
+
+document.addEventListener('keydown', e => {
+  if ($('round').classList.contains('hidden') || !$('bonusModal').classList.contains('hidden')) return;
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); running ? stopTimer() : startTimer(); }
+});
+
+function roundPoints() { return ($('ck-time').checked ? 1 : 0) + ($('ck-because').checked ? 1 : 0) + ($('ck-polish').checked ? 1 : 0) + ($('ck-challenge').checked ? 2 : 0); }
+function visibleTotal() { return state.rounds.reduce((s, r) => s + r.points, 0); }
+function updatePoints() { $('roundPts').textContent = roundPoints(); $('scoreLabel').textContent = (visibleTotal() + roundPoints()) + ' pts'; }
+['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach(id => $(id).addEventListener('change', updatePoints));
+
+function saveRound() {
+  if (running) stopTimer();
+  const [a, b] = state.pairs[state.idx];
+  state.rounds.push({ q: `${a} or ${b}`, choice: state.choice === 'A' ? a : state.choice === 'B' ? b : '–', level: state.level, time: elapsed, goal: LEVELS[state.level].goal, points: roundPoints() });
+}
+$('nextBtn').onclick = () => { if (!state.revealed) return; saveRound(); state.idx++; if (state.idx >= state.pairs.length) finish(); else loadRound(); };
+$('finishBtn').onclick = () => { if (state.revealed && (elapsed > 0 || roundPoints() > 0)) saveRound(); finish(); };
+
+/* BONUS (masked) */
+$('bonusBtn').onclick = () => { $('bonusPts').value = ''; $('bonusMsg').value = ''; $('bonusErr').textContent = ''; $('bonusModal').classList.remove('hidden'); setTimeout(() => $('bonusPts').focus(), 50); };
+$('bonusCancel').onclick = () => $('bonusModal').classList.add('hidden');
+$('bonusSave').onclick = () => {
+  const raw = $('bonusPts').value.trim(), n = raw === '' ? 0 : Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 20) { $('bonusErr').textContent = 'Use a whole number from 0 to 20'; return; }
+  state.bonus = n; state.bonusMsg = $('bonusMsg').value.trim();
+  $('bonusModal').classList.add('hidden'); $('bonusBtn').textContent = "Teacher's note 🎁 ✓";
+};
+
+/* FINAL */
+function titleFor(total, n) { const avg = n ? total / n : 0; return avg >= 4 ? '🏆 Champion' : avg >= 2.5 ? '🎤 Debater' : '🌱 Rookie'; }
+
+function finish() {
+  resetTimer();
+  const base = visibleTotal(), total = base + state.bonus, n = state.rounds.length;
+  const avgTime = n ? state.rounds.reduce((s, r) => s + r.time, 0) / n : 0;
+  const h = load('tk_history', []);
+  h.push({ date: new Date().toISOString(), name: state.name, rounds: n, avgTime, bonus: state.bonus, total });
+  save('tk_history', h);
+
+  $('finalName').textContent = state.name;
+  $('finalTotal').textContent = base;
+  $('finalTitle').textContent = titleFor(base, n);
+  $('giftZone').classList.remove('hidden');
+  $('gift').className = 'gift'; $('drum').textContent = "Teacher's note… click the gift!";
+  $('bonusZone').innerHTML = '';
+
+  const body = $('summaryBody'); body.innerHTML = '';
+  state.rounds.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    [i + 1, r.q, r.choice, LEVELS[r.level].label, `${fmt(r.time)} / ${fmt(r.goal)}`, r.points].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    body.appendChild(tr);
+  });
+  if (n) {
+    const best = state.rounds.reduce((m, r, i) => (r.points > state.rounds[m].points || (r.points === state.rounds[m].points && r.time > state.rounds[m].time)) ? i : m, 0);
+    const r = state.rounds[best];
+    $('bestRound').textContent = `⭐ Best round: #${best + 1}, ${r.q} (${fmt(r.time)}, ${r.points} pts)`;
+  } else $('bestRound').textContent = '';
+  drawChart(); show('final');
+}
+
+$('gift').onclick = () => {
+  const gift = $('gift'); if (gift.classList.contains('shake')) return;
+  gift.classList.add('shake');
+  const steps = ['3…', '2…', '1…'];
+  steps.forEach((t, i) => setTimeout(() => $('drum').textContent = t, i * 700));
+  setTimeout(() => {
+    gift.classList.remove('shake'); gift.classList.add('boom');
+    setTimeout(() => {
+      $('giftZone').classList.add('hidden');
+      const msg = state.bonusMsg ? `<div class="bonus-msg">“${escapeHtml(state.bonusMsg)}”</div>` : '';
+      $('bonusZone').innerHTML = `<div class="bonus-pop">+${state.bonus}</div>${msg}`;
+      burst();
+      countUp($('finalTotal'), visibleTotal(), visibleTotal() + state.bonus, 1200, () => {
+        $('finalTitle').textContent = titleFor(visibleTotal() + state.bonus, state.rounds.length);
+      });
+    }, 450);
+  }, 2100);
+};
+
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function countUp(el, from, to, ms, done) {
+  const t0 = performance.now();
+  (function step(t) { const p = Math.min(1, (t - t0) / ms); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); else if (done) done(); })(t0);
+}
+
+function drawChart() {
+  const svg = $('chart'), W = 700, H = 240, P = 40, rs = state.rounds;
+  if (!rs.length) { svg.innerHTML = `<text x="350" y="120" fill="#8e9bb8" text-anchor="middle">No rounds played</text>`; return; }
+  const max = Math.max(90, ...rs.map(r => r.time), ...rs.map(r => r.goal)) * 1.1;
+  const x = i => rs.length === 1 ? W / 2 : P + i * ((W - 2 * P) / (rs.length - 1));
+  const y = v => H - P - (v / max) * (H - 2 * P);
+  let out = '';
+  [0, 30, 60, 90, 120, 150, 180].filter(v => v <= max).forEach(v => {
+    out += `<line x1="${P}" x2="${W - 20}" y1="${y(v)}" y2="${y(v)}" stroke="#2a3550"/><text x="${P - 8}" y="${y(v) + 4}" fill="#8e9bb8" font-size="12" text-anchor="end">${fmt(v)}</text>`;
+  });
+  rs.forEach((r, i) => out += `<line x1="${x(i) - 14}" x2="${x(i) + 14}" y1="${y(r.goal)}" y2="${y(r.goal)}" stroke="#facc15" stroke-width="3"/>`);
+  if (rs.length > 1) out += `<polyline fill="none" stroke="#ef3b3b" stroke-width="3" points="${rs.map((r, i) => `${x(i)},${y(r.time)}`).join(' ')}"/>`;
+  rs.forEach((r, i) => out += `<circle cx="${x(i)}" cy="${y(r.time)}" r="7" fill="${r.time >= r.goal ? '#4ade80' : '#ef3b3b'}"/><text x="${x(i)}" y="${H - P + 20}" fill="#8e9bb8" font-size="12" text-anchor="middle">R${i + 1}</text>`);
+  out += `<text x="${W - 20}" y="16" fill="#facc15" font-size="12" text-anchor="end">— goal</text>`;
+  svg.innerHTML = out;
+}
+$('toHome').onclick = () => show('home');
+
+/* CONFETTI */
+const cv = $('confetti'), cx = cv.getContext('2d'); let parts = [];
+function sizeCanvas() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', sizeCanvas); sizeCanvas();
+function burst() {
+  const colors = ['#ef3b3b', '#ffffff', '#facc15', '#38bdf8', '#f472b6', '#4ade80'];
+  for (let i = 0; i < 220; i++) parts.push({ x: innerWidth / 2, y: innerHeight / 3, vx: (Math.random() - .5) * 18, vy: Math.random() * -16 - 4, s: Math.random() * 8 + 4, c: colors[i % colors.length], r: Math.random() * 6, life: 160 });
+  if (parts.length <= 220) requestAnimationFrame(animConfetti);
+}
+function animConfetti() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => { p.vy += .45; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += .2; p.life--; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore(); });
+  parts = parts.filter(p => p.life > 0 && p.y < cv.height + 40);
+  if (parts.length) requestAnimationFrame(animConfetti); else cx.clearRect(0, 0, cv.width, cv.height);
+}
+</script>
+</body>
+</html>
