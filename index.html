@@ -210,14 +210,15 @@
         <strong>Checklist</strong> <span class="muted">(after the player finishes)</span>
         <div class="result-line" id="resultLine"></div>
         <label class="check"><span>Reached the time goal</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-time"></span></label>
-        <label class="check"><span>Used "because" or "for example"</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
+        <label class="check"><span>Used linking words<br><span class="muted" style="font-weight:400; font-size:14px">because · for example · I think · in my opinion · but · so · also · first / second · on the other hand · that's why</span></span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
         <label class="check"><span>No Polish</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-polish"></span></label>
         <label class="check"><span>Answered my challenge</span><span><span class="pts">+2</span> <input type="checkbox" id="ck-challenge"></span></label>
       </div>
       <div class="card" style="display:flex; flex-direction:column; gap:12px; justify-content:space-between">
         <div><strong>This round</strong><div class="result-line">Points: <span class="score" id="roundPts">0</span></div></div>
-        <button class="btn gold" id="bonusBtn">Teacher's note 🎁</button>
+        <button class="btn ghost" id="bonusBtn" style="align-self:flex-start; font-size:14px; padding:8px 12px">🔒</button>
         <button class="btn big" id="nextBtn">Save &amp; next round ➜</button>
+        <button class="btn ghost" id="prevBtn">← Previous round</button>
         <button class="btn ghost" id="finishBtn">Finish game &amp; show results</button>
       </div>
     </div>
@@ -255,9 +256,11 @@
 <!-- BONUS MODAL (values are masked) -->
 <div class="modal-bg hidden" id="bonusModal">
   <div class="card modal">
-    <strong>Teacher's note 🎁</strong>
-    <p class="muted" style="margin:6px 0 0">Secret. Type the extra points (0 to 20) and an optional message. Both stay hidden.</p>
-    <label for="bonusPts">Points</label>
+    <strong>🔒 Teacher only</strong>
+    <p class="muted" style="margin:6px 0 0">Everything here stays hidden.</p>
+    <label for="bonusPass">Password</label>
+    <input id="bonusPass" type="password" autocomplete="off">
+    <label for="bonusPts">Points (0 to 20)</label>
     <input id="bonusPts" type="password" inputmode="numeric" autocomplete="off">
     <label for="bonusMsg">Secret message</label>
     <input id="bonusMsg" type="password" autocomplete="off">
@@ -326,7 +329,6 @@ $('startGame').onclick = () => {
   const pairs = parsePairs(questionsText);
   state = { name: $('playerName').value.trim() || 'Player', pairs, idx: 0, level: 'easy', choice: null, revealed: false, rounds: [], bonus: 0, bonusMsg: '' };
   $('playerLabel').textContent = state.name;
-  $('bonusBtn').textContent = "Teacher's note 🎁";
   loadRound(); show('round');
 };
 
@@ -340,6 +342,7 @@ function loadRound() {
   ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach(id => $(id).checked = false);
   $('resultLine').textContent = '';
   $('roundInfo').textContent = `Round ${state.idx + 1} of ${state.pairs.length}`;
+  $('prevBtn').disabled = state.idx === 0;
   $('nextBtn').textContent = state.idx + 1 >= state.pairs.length ? 'Save & show results ➜' : 'Save & next round ➜';
   setLevel(state.level); updatePoints();
 }
@@ -384,8 +387,13 @@ function stopTimer() {
   $('startBtn').disabled = false; $('stopBtn').disabled = true;
   const g = LEVELS[state.level].goal, hit = elapsed >= g;
   $('ck-time').checked = hit;
-  $('resultLine').textContent = hit ? `✅ ${fmt(elapsed)} · Goal reached!` : `⏱️ ${fmt(elapsed)} · ${fmt(g - elapsed)} short of the goal`;
+  $('resultLine').textContent = resultText(elapsed, g);
   updatePoints();
+}
+function resultText(t, g) {
+  if (t >= g) return `🔥 ${fmt(t)} · You beat the clock!`;
+  const left = Math.ceil(g - t);
+  return t >= g * 0.7 ? `💪 ${fmt(t)} · So close! Just ${left} more seconds next time.` : `⏱️ ${fmt(t)} · Good start! Try to keep going a bit longer.`;
 }
 function resetTimer() { running = false; clearInterval(timerId); elapsed = 0; $('stopBtn').disabled = true; if (state && state.revealed) $('startBtn').disabled = false; drawTimer(); }
 $('startBtn').onclick = startTimer; $('stopBtn').onclick = stopTimer;
@@ -405,19 +413,35 @@ function updatePoints() { $('roundPts').textContent = roundPoints(); $('scoreLab
 function saveRound() {
   if (running) stopTimer();
   const [a, b] = state.pairs[state.idx];
-  state.rounds.push({ q: `${a} or ${b}`, choice: state.choice === 'A' ? a : state.choice === 'B' ? b : '–', level: state.level, time: elapsed, goal: LEVELS[state.level].goal, points: roundPoints() });
+  state.rounds.push({ q: `${a} or ${b}`, side: state.choice, choice: state.choice === 'A' ? a : state.choice === 'B' ? b : '–', level: state.level, time: elapsed, goal: LEVELS[state.level].goal, points: roundPoints(),
+    checks: ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].map(id => $(id).checked) });
 }
+$('prevBtn').onclick = () => {
+  if (state.idx === 0 || !state.rounds.length) return;
+  if (running) { running = false; clearInterval(timerId); }
+  state.idx--;
+  const r = state.rounds.pop();
+  loadRound();
+  $('revealQ').onclick();
+  setLevel(r.level);
+  if (r.side) choose(r.side);
+  elapsed = r.time; drawTimer();
+  ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach((id, i) => $(id).checked = r.checks[i]);
+  if (r.time > 0) $('resultLine').textContent = resultText(r.time, r.goal);
+  updatePoints();
+};
 $('nextBtn').onclick = () => { if (!state.revealed) return; saveRound(); state.idx++; if (state.idx >= state.pairs.length) finish(); else loadRound(); };
 $('finishBtn').onclick = () => { if (state.revealed && (elapsed > 0 || roundPoints() > 0)) saveRound(); finish(); };
 
 /* BONUS (masked) */
-$('bonusBtn').onclick = () => { $('bonusPts').value = ''; $('bonusMsg').value = ''; $('bonusErr').textContent = ''; $('bonusModal').classList.remove('hidden'); setTimeout(() => $('bonusPts').focus(), 50); };
+$('bonusBtn').onclick = () => { $('bonusPass').value = ''; $('bonusPts').value = ''; $('bonusMsg').value = ''; $('bonusErr').textContent = ''; $('bonusModal').classList.remove('hidden'); setTimeout(() => $('bonusPass').focus(), 50); };
 $('bonusCancel').onclick = () => $('bonusModal').classList.add('hidden');
 $('bonusSave').onclick = () => {
+  if ($('bonusPass').value !== PASSWORD) { $('bonusErr').textContent = 'Wrong password'; return; }
   const raw = $('bonusPts').value.trim(), n = raw === '' ? 0 : Number(raw);
   if (!Number.isInteger(n) || n < 0 || n > 20) { $('bonusErr').textContent = 'Use a whole number from 0 to 20'; return; }
   state.bonus = n; state.bonusMsg = $('bonusMsg').value.trim();
-  $('bonusModal').classList.add('hidden'); $('bonusBtn').textContent = "Teacher's note 🎁 ✓";
+  $('bonusModal').classList.add('hidden');
 };
 
 /* FINAL */
