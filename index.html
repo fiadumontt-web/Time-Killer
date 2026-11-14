@@ -132,7 +132,7 @@
     <div class="home-grid">
       <div class="card">
         <label for="playerName">Player name</label>
-        <input id="playerName" value="Maksym">
+        <input id="playerName" placeholder="Your name">
         <p class="muted">Rules: two options appear. Pick one and explain why. Easy = speak 30 s, Medium = 1 min, Hard = 1:30. Say "Go" to start and "Done" when you finish.</p>
         <button class="btn big" id="startGame" style="margin-top:8px">Start game ▶</button>
       </div>
@@ -185,7 +185,7 @@
         <button data-level="medium">Medium · 1:00</button>
         <button data-level="hard">Hard · 1:30</button>
       </div>
-      <div class="pill"><span id="playerLabel">Maksym</span> · <span class="score" id="scoreLabel">0 pts</span></div>
+      <div class="pill"><span id="playerLabel">Player</span> · <span class="score" id="scoreLabel">0 pts</span></div>
     </div>
 
     <div class="arena">
@@ -210,7 +210,7 @@
         <strong>Checklist</strong> <span class="muted">(after the player finishes)</span>
         <div class="result-line" id="resultLine"></div>
         <label class="check"><span>Reached the time goal</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-time"></span></label>
-        <label class="check"><span>Used linking words<br><span class="muted" style="font-weight:400; font-size:14px">because · for example · I think · in my opinion · but · so · also · first / second · on the other hand · that's why</span></span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
+        <label class="check"><span>Recommended words<br><span class="muted" style="font-weight:400; font-size:14px">because · for example · I think · in my opinion · but · so · also · first / second · on the other hand · that's why</span></span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
         <label class="check"><span>No Polish</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-polish"></span></label>
         <label class="check"><span>Answered my challenge</span><span><span class="pts">+2</span> <input type="checkbox" id="ck-challenge"></span></label>
       </div>
@@ -227,7 +227,7 @@
   <!-- FINAL -->
   <section id="final" class="hidden">
     <div class="card final-hero">
-      <div class="muted" id="finalName">Maksym</div>
+      <div class="muted" id="finalName">Player</div>
       <div class="final-total" id="finalTotal">0</div>
       <div class="muted">points</div>
       <div class="final-title" id="finalTitle"></div>
