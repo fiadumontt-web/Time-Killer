@@ -82,9 +82,17 @@
   .lower { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 16px; }
   .check { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 10px; background: #0a0e18; margin-bottom: 8px; cursor: pointer; user-select: none; }
   .check input { width: 22px; height: 22px; accent-color: var(--ok); }
+  .check.locked { opacity: .4; cursor: not-allowed; }
   .check .pts { color: var(--gold); font-weight: 800; }
   .result-line { font-size: 18px; margin: 10px 0; min-height: 26px; }
 
+
+  .stages { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stage { background: #0a0e18; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 700; color: var(--muted); }
+  .stage.on { background: var(--gold); color: #0b0f1a; border-color: var(--gold); }
+  .stage.done { color: var(--ok); border-color: var(--ok); }
+  .prompt { font-size: 22px; font-weight: 800; text-align: center; }
+  .action-row { display: flex; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
   /* MODAL */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 20; }
   .modal { width: min(420px, 92vw); }
@@ -133,7 +141,7 @@
       <div class="card">
         <label for="playerName">Player name</label>
         <input id="playerName" placeholder="Your name">
-        <p class="muted">Rules: two options appear. Pick one and explain why. Easy = speak 30 s, Medium = 1 min, Hard = 1:30. Say "Go" to start and "Done" when you finish.</p>
+        <p class="muted">Rules: two options appear. Pick one and explain why. Every round has 3 stages: Easy (0:30) choose a side, Medium (1:00) explain why, Hard (1:30) defend it against the teacher's challenge. Answer before the time runs out. Say "Go" to start and "Done" when you finish.</p>
         <button class="btn big" id="startGame" style="margin-top:8px">Start game ▶</button>
       </div>
       <div class="card" style="display:flex; flex-direction:column; gap:12px">
@@ -169,7 +177,7 @@
     <div class="topbar"><h2 class="brand" style="margin:0">📅 Results history</h2><button class="btn ghost" id="historyBack">← Back</button></div>
     <div class="card">
       <table>
-        <thead><tr><th>Date</th><th>Player</th><th>Rounds</th><th>Avg. speaking time</th><th>Bonus</th><th>Total</th></tr></thead>
+        <thead><tr><th>Date</th><th>Player</th><th>Rounds</th><th>Avg. time per round</th><th>Bonus</th><th>Total</th></tr></thead>
         <tbody id="historyBody"></tbody>
       </table>
       <p class="muted" id="historyEmpty">No games yet.</p>
@@ -180,75 +188,85 @@
   <section id="round" class="hidden">
     <div class="topbar">
       <div class="pill" id="roundInfo">Round 1</div>
-      <div class="levels" id="levels">
-        <button data-level="easy">Easy · 0:30</button>
-        <button data-level="medium">Medium · 1:00</button>
-        <button data-level="hard">Hard · 1:30</button>
+      <div class="stages">
+        <div class="stage" id="st0">1 · Easy · Choose</div>
+        <div class="stage" id="st1">2 · Medium · Explain</div>
+        <div class="stage" id="st2">3 · Hard · Defend</div>
       </div>
-      <div class="pill"><span id="playerLabel">Player</span> · <span class="score" id="scoreLabel">0 pts</span></div>
+      <div class="pill" style="font-size:20px"><span id="playerLabel">Player</span> · <span class="score" id="scoreLabel">0 pts</span></div>
     </div>
 
     <div class="arena">
       <div class="side a" id="sideA"><div class="flip"><div class="face front">?</div><div class="face back"><div class="opt" id="optA"></div><div class="tag">Click to choose</div></div></div></div>
       <div class="center card">
+        <div class="prompt" id="prompt">Easy · Choose a side!</div>
         <button class="btn gold big" id="revealQ">Reveal question 🎲</button>
         <div class="timer" id="timer">0:00</div>
         <div class="bar"><div class="fill" id="fill"></div><div class="goal" id="goalMark"></div></div>
-        <div class="muted" id="goalLabel">Goal: 0:30</div>
+        <div class="muted" id="goalLabel">Time limit: 0:30</div>
         <div class="controls">
           <button class="btn blue big" id="startBtn" disabled>Go ▶</button>
           <button class="btn pink big" id="stopBtn" disabled>Done ■</button>
         </div>
         <button class="btn ghost" id="resetBtn">Reset timer</button>
-        <div class="kbd">Space bar = Go / Done</div>
+        <div class="result-line" id="resultLine"></div>
       </div>
       <div class="side b" id="sideB"><div class="flip"><div class="face front">?</div><div class="face back"><div class="opt" id="optB"></div><div class="tag">Click to choose</div></div></div></div>
     </div>
 
-    <div class="lower">
-      <div class="card">
-        <strong>Checklist</strong> <span class="muted">(after the player finishes)</span>
-        <div class="result-line" id="resultLine"></div>
-        <label class="check"><span>Reached the time goal</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-time"></span></label>
-        <label class="check"><span>Recommended words<br><span class="muted" style="font-weight:400; font-size:14px">because · for example · I think · in my opinion · but · so · also · first / second · on the other hand · that's why</span></span><span><span class="pts">+1</span> <input type="checkbox" id="ck-because"></span></label>
-        <label class="check"><span>No Polish</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-polish"></span></label>
-        <label class="check"><span>Answered my challenge</span><span><span class="pts">+2</span> <input type="checkbox" id="ck-challenge"></span></label>
+    <div class="action-row">
+      <button class="btn big" id="nextStage" disabled>Next stage ➜</button>
+    </div>
+
+    <!-- TEACHER PANEL (after the round) -->
+    <div class="card hidden" id="teacherPanel" style="margin-top:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+        <strong>Teacher's checklist</strong>
+        <button class="btn ghost" id="bonusBtn" style="font-size:14px; padding:8px 12px">🔒</button>
       </div>
-      <div class="card" style="display:flex; flex-direction:column; gap:12px; justify-content:space-between">
-        <div><strong>This round</strong><div class="result-line">Points: <span class="score" id="roundPts">0</span></div></div>
-        <button class="btn ghost" id="bonusBtn" style="align-self:flex-start; font-size:14px; padding:8px 12px">🔒</button>
-        <button class="btn big" id="nextBtn">Save &amp; next round ➜</button>
-        <button class="btn ghost" id="prevBtn">← Previous round</button>
-        <button class="btn ghost" id="finishBtn">Finish game &amp; show results</button>
+      <div class="lower" style="margin-top:12px">
+        <div>
+          <label class="check"><span>Easy in time</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-s0"></span></label>
+          <label class="check"><span>Medium in time</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-s1"></span></label>
+          <label class="check"><span>Hard in time</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-s2"></span></label>
+        </div>
+        <div>
+          <label class="check"><span>Recommended words<br><span class="muted" style="font-weight:400; font-size:14px">because · for example · I think · in my opinion · but · so · also · first / second · on the other hand · that's why</span></span><span><span class="pts">+1</span> <input type="checkbox" id="ck-words"></span></label>
+          <label class="check"><span>No Polish</span><span><span class="pts">+1</span> <input type="checkbox" id="ck-polish"></span></label>
+          <label class="check"><span>Answered my challenge</span><span><span class="pts">+2</span> <input type="checkbox" id="ck-challenge"></span></label>
+        </div>
       </div>
+      <div class="action-row">
+        <div class="result-line" style="font-size:24px">Round points: <span class="score" id="roundPts">0</span></div>
+      </div>
+      <div class="action-row"><button class="btn gold big" id="showResults">Show results 🎁</button></div>
     </div>
   </section>
 
-  <!-- FINAL -->
-  <section id="final" class="hidden">
+  <!-- RESULTS -->
+  <section id="results" class="hidden">
     <div class="card final-hero">
-      <div class="muted" id="finalName">Player</div>
-      <div class="final-total" id="finalTotal">0</div>
-      <div class="muted">points</div>
-      <div class="final-title" id="finalTitle"></div>
+      <div class="muted" id="resRound">Round 1</div>
+      <div style="font-size:22px; margin-top:6px" id="resQuestion"></div>
+      <div class="final-total" id="resTotal">0</div>
+      <div class="muted">round points</div>
+      <div class="final-title" id="resTitle"></div>
       <div id="giftZone">
-        <div class="gift" id="gift" title="Open">🎁</div>
+        <div class="gift" id="gift">🎁</div>
         <div class="drum" id="drum">Teacher's note… click the gift!</div>
       </div>
       <div id="bonusZone"></div>
+      <div style="font-size:24px; margin-top:18px" class="hidden" id="gameTotalLine">Game total: <span class="score" id="gameTotal">0</span> pts</div>
     </div>
     <div class="card" style="margin-top:16px">
-      <strong>Speaking time per round</strong>
-      <svg id="chart" viewBox="0 0 700 240" style="width:100%; height:auto; margin-top:10px"></svg>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <strong>Rounds</strong>
       <table>
-        <thead><tr><th>#</th><th>Question</th><th>Choice</th><th>Level</th><th>Time</th><th>Points</th></tr></thead>
-        <tbody id="summaryBody"></tbody>
+        <thead><tr><th>Stage</th><th>Time</th><th>Limit</th><th>Result</th></tr></thead>
+        <tbody id="stageBody"></tbody>
       </table>
-      <p id="bestRound" style="margin-top:14px"></p>
-      <button class="btn ghost" id="toHome" style="margin-top:6px">Back to menu</button>
+    </div>
+    <div class="action-row hidden" id="afterButtons">
+      <button class="btn ghost big" id="startAgain">↺ Start again</button>
+      <button class="btn big" id="nextRound">Play round 2 ➜</button>
     </div>
   </section>
 </div>
@@ -286,7 +304,7 @@ let state = null, timerId = null, startAt = 0, elapsed = 0, running = false;
 
 function fmt(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function parsePairs(t) { return t.split('\n').map(l => l.split('|').map(x => x.trim())).filter(p => p.length >= 2 && p[0] && p[1]).map(p => [p[0], p[1]]); }
-function show(id) { ['home', 'admin', 'history', 'round', 'final'].forEach(s => $(s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); }
+function show(id) { ['home', 'admin', 'history', 'round', 'results'].forEach(s => $(s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); }
 
 /* INTRO */
 $('intro').onclick = () => { $('intro').classList.add('leave'); setTimeout(() => { $('intro').classList.add('hidden'); show('home'); }, 650); };
@@ -325,79 +343,97 @@ $('openHistory').onclick = () => {
 $('historyBack').onclick = () => show('home');
 
 /* GAME */
+const STAGES = [
+  { key: 'easy', label: 'Easy', prompt: 'Easy · Choose a side!', goal: 30 },
+  { key: 'medium', label: 'Medium', prompt: 'Medium · Explain why!', goal: 60 },
+  { key: 'hard', label: 'Hard', prompt: "Hard · Defend it against my challenge!", goal: 90 }
+];
+const CHECKS = ['ck-s0', 'ck-s1', 'ck-s2', 'ck-words', 'ck-polish', 'ck-challenge'];
+const CHECK_PTS = [1, 1, 1, 1, 1, 2];
+const show2 = id => { ['home', 'admin', 'history', 'round', 'results'].forEach(s => $(s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); };
+
 $('startGame').onclick = () => {
-  const pairs = parsePairs(questionsText);
-  state = { name: $('playerName').value.trim() || 'Player', pairs, idx: 0, level: 'easy', choice: null, revealed: false, rounds: [], bonus: 0, bonusMsg: '' };
+  state = { id: Date.now(), name: $('playerName').value.trim() || 'Player', pairs: parsePairs(questionsText), idx: 0, gameTotal: 0, bonusTotal: 0, roundsDone: 0, times: [] };
   $('playerLabel').textContent = state.name;
-  loadRound(); show('round');
+  startRound(); show2('round');
 };
 
-function loadRound() {
+function startRound() {
+  Object.assign(state, { stage: 0, stageTimes: [null, null, null], choice: null, revealed: false, bonus: 0, bonusMsg: '', opened: false });
   resetTimer();
-  state.choice = null; state.revealed = false;
   ['sideA', 'sideB'].forEach(id => $(id).classList.remove('open', 'chosen'));
   $('optA').textContent = ''; $('optB').textContent = '';
   $('revealQ').classList.remove('hidden');
-  $('startBtn').disabled = true;
-  ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach(id => $(id).checked = false);
-  $('resultLine').textContent = '';
+  $('teacherPanel').classList.add('hidden');
+  CHECKS.forEach(id => $(id).checked = false);
   $('roundInfo').textContent = `Round ${state.idx + 1} of ${state.pairs.length}`;
-  $('prevBtn').disabled = state.idx === 0;
-  $('nextBtn').textContent = state.idx + 1 >= state.pairs.length ? 'Save & show results ➜' : 'Save & next round ➜';
-  setLevel(state.level); updatePoints();
+  updateScore(); setStage(0);
+}
+
+function setStage(n) {
+  state.stage = n;
+  STAGES.forEach((s, i) => { $('st' + i).classList.toggle('on', i === n); $('st' + i).classList.toggle('done', state.stageTimes[i] !== null && i !== n); });
+  $('prompt').textContent = n < 3 ? STAGES[n].prompt : 'Round finished! 🎉';
+  if (n < 3) $('goalLabel').textContent = 'Time limit: ' + fmt(STAGES[n].goal);
+  resetTimer(); $('resultLine').textContent = '';
+  $('startBtn').disabled = !state.revealed || n >= 3;
+  $('nextStage').disabled = true;
+  $('nextStage').textContent = n === 2 ? 'Finish round ✓' : 'Next stage ➜';
+  $('nextStage').classList.toggle('hidden', n >= 3);
 }
 
 $('revealQ').onclick = () => {
   const [a, b] = state.pairs[state.idx];
   $('optA').textContent = a; $('optB').textContent = b;
-  $('sideA').classList.add('open');
-  setTimeout(() => $('sideB').classList.add('open'), 250);
+  $('sideA').classList.add('open'); setTimeout(() => $('sideB').classList.add('open'), 250);
   state.revealed = true; $('revealQ').classList.add('hidden'); $('startBtn').disabled = false;
 };
 
-function setLevel(lv) {
-  state.level = lv;
-  document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('on', b.dataset.level === lv));
-  $('goalLabel').textContent = 'Goal: ' + fmt(LEVELS[lv].goal); drawTimer();
-}
-document.querySelectorAll('#levels button').forEach(b => b.onclick = () => setLevel(b.dataset.level));
-
 function choose(side) {
-  if (!state.revealed) return;
+  if (!state.revealed || state.stage !== 0) return;
   state.choice = side;
   $('sideA').classList.toggle('chosen', side === 'A'); $('sideB').classList.toggle('chosen', side === 'B');
+  checkNext();
 }
 $('sideA').onclick = () => choose('A'); $('sideB').onclick = () => choose('B');
 
+function goal() { return STAGES[Math.min(state ? state.stage : 0, 2)].goal; }
 function drawTimer() {
-  const g = LEVELS[state ? state.level : 'easy'].goal, scale = g * 1.5, hit = elapsed >= g;
-  $('timer').textContent = fmt(elapsed); $('timer').classList.toggle('hit', hit);
-  $('fill').style.width = Math.min(100, elapsed / scale * 100) + '%'; $('fill').classList.toggle('hit', hit);
+  const g = goal(), scale = g * 1.3, over = elapsed > g;
+  $('timer').textContent = fmt(elapsed);
+  $('timer').classList.toggle('hit', !over && elapsed > 0);
+  $('timer').style.color = over ? 'var(--red)' : '';
+  $('fill').style.width = Math.min(100, elapsed / scale * 100) + '%';
+  $('fill').classList.toggle('hit', !over);
   $('goalMark').style.left = (g / scale * 100) + '%';
 }
 function startTimer() {
-  if (running || !state.revealed) return;
+  if (running || !state.revealed || state.stage >= 3) return;
   running = true; startAt = performance.now() - elapsed * 1000;
   timerId = setInterval(() => { elapsed = (performance.now() - startAt) / 1000; drawTimer(); }, 100);
-  $('startBtn').disabled = true; $('stopBtn').disabled = false; $('resultLine').textContent = '';
+  $('startBtn').disabled = true; $('stopBtn').disabled = false; $('resultLine').textContent = ''; $('nextStage').disabled = true;
 }
 function stopTimer() {
   if (!running) return;
   running = false; clearInterval(timerId); elapsed = (performance.now() - startAt) / 1000; drawTimer();
   $('startBtn').disabled = false; $('stopBtn').disabled = true;
-  const g = LEVELS[state.level].goal, hit = elapsed >= g;
-  $('ck-time').checked = hit;
-  $('resultLine').textContent = resultText(elapsed, g);
-  updatePoints();
+  state.stageTimes[state.stage] = elapsed;
+  $('resultLine').textContent = resultText(elapsed, goal());
+  checkNext();
+}
+function checkNext() {
+  const timed = state.stageTimes[state.stage] !== null && !running;
+  $('nextStage').disabled = !(timed && (state.stage !== 0 || state.choice));
+  if (state.stage === 0 && timed && !state.choice) $('resultLine').textContent += ' · Now click the side you chose!';
 }
 function resultText(t, g) {
-  if (t >= g) return `🔥 ${fmt(t)} · You beat the clock!`;
-  const left = Math.ceil(g - t);
-  return t >= g * 0.7 ? `💪 ${fmt(t)} · So close! Just ${left} more seconds next time.` : `⏱️ ${fmt(t)} · Good start! Try to keep going a bit longer.`;
+  if (t <= g / 2) return `⚡ ${fmt(t)} · Lightning fast!`;
+  if (t <= g) return `✅ ${fmt(t)} · Made it in time!`;
+  return `⏰ ${fmt(t)} · Over time. Be quicker next time!`;
 }
-function resetTimer() { running = false; clearInterval(timerId); elapsed = 0; $('stopBtn').disabled = true; if (state && state.revealed) $('startBtn').disabled = false; drawTimer(); }
+function resetTimer() { running = false; clearInterval(timerId); elapsed = 0; $('stopBtn').disabled = true; if (state && state.revealed && state.stage < 3) $('startBtn').disabled = false; drawTimer(); }
 $('startBtn').onclick = startTimer; $('stopBtn').onclick = stopTimer;
-$('resetBtn').onclick = () => { resetTimer(); $('resultLine').textContent = ''; $('ck-time').checked = false; updatePoints(); };
+$('resetBtn').onclick = () => { if (state.stage >= 3) return; resetTimer(); state.stageTimes[state.stage] = null; $('resultLine').textContent = ''; $('nextStage').disabled = true; };
 
 document.addEventListener('keydown', e => {
   if ($('round').classList.contains('hidden') || !$('bonusModal').classList.contains('hidden')) return;
@@ -405,35 +441,22 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); running ? stopTimer() : startTimer(); }
 });
 
-function roundPoints() { return ($('ck-time').checked ? 1 : 0) + ($('ck-because').checked ? 1 : 0) + ($('ck-polish').checked ? 1 : 0) + ($('ck-challenge').checked ? 2 : 0); }
-function visibleTotal() { return state.rounds.reduce((s, r) => s + r.points, 0); }
-function updatePoints() { $('roundPts').textContent = roundPoints(); $('scoreLabel').textContent = (visibleTotal() + roundPoints()) + ' pts'; }
-['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach(id => $(id).addEventListener('change', updatePoints));
-
-function saveRound() {
-  if (running) stopTimer();
-  const [a, b] = state.pairs[state.idx];
-  state.rounds.push({ q: `${a} or ${b}`, side: state.choice, choice: state.choice === 'A' ? a : state.choice === 'B' ? b : '–', level: state.level, time: elapsed, goal: LEVELS[state.level].goal, points: roundPoints(),
-    checks: ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].map(id => $(id).checked) });
-}
-$('prevBtn').onclick = () => {
-  if (state.idx === 0 || !state.rounds.length) return;
-  if (running) { running = false; clearInterval(timerId); }
-  state.idx--;
-  const r = state.rounds.pop();
-  loadRound();
-  $('revealQ').onclick();
-  setLevel(r.level);
-  if (r.side) choose(r.side);
-  elapsed = r.time; drawTimer();
-  ['ck-time', 'ck-because', 'ck-polish', 'ck-challenge'].forEach((id, i) => $(id).checked = r.checks[i]);
-  if (r.time > 0) $('resultLine').textContent = resultText(r.time, r.goal);
-  updatePoints();
+$('nextStage').onclick = () => {
+  if ($('nextStage').disabled) return;
+  if (state.stage < 2) { setStage(state.stage + 1); return; }
+  // finish round -> teacher panel
+  state.stageTimes.forEach((t, i) => $('ck-s' + i).checked = t !== null && t <= STAGES[i].goal);
+  setStage(3);
+  $('teacherPanel').classList.remove('hidden');
+  updateScore();
+  setTimeout(() => $('teacherPanel').scrollIntoView({ behavior: 'smooth' }), 100);
 };
-$('nextBtn').onclick = () => { if (!state.revealed) return; saveRound(); state.idx++; if (state.idx >= state.pairs.length) finish(); else loadRound(); };
-$('finishBtn').onclick = () => { if (state.revealed && (elapsed > 0 || roundPoints() > 0)) saveRound(); finish(); };
 
-/* BONUS (masked) */
+function roundPoints() { return CHECKS.reduce((s, id, i) => s + ($(id).checked ? CHECK_PTS[i] : 0), 0); }
+function updateScore() { $('roundPts').textContent = roundPoints(); $('scoreLabel').textContent = state.gameTotal + ' pts'; }
+CHECKS.forEach(id => $(id).addEventListener('change', updateScore));
+
+/* BONUS (masked, password) */
 $('bonusBtn').onclick = () => { $('bonusPass').value = ''; $('bonusPts').value = ''; $('bonusMsg').value = ''; $('bonusErr').textContent = ''; $('bonusModal').classList.remove('hidden'); setTimeout(() => $('bonusPass').focus(), 50); };
 $('bonusCancel').onclick = () => $('bonusModal').classList.add('hidden');
 $('bonusSave').onclick = () => {
@@ -444,43 +467,30 @@ $('bonusSave').onclick = () => {
   $('bonusModal').classList.add('hidden');
 };
 
-/* FINAL */
-function titleFor(total, n) { const avg = n ? total / n : 0; return avg >= 4 ? '🏆 Champion' : avg >= 2.5 ? '🎤 Debater' : '🌱 Rookie'; }
+/* RESULTS */
+function titleFor(p) { return p >= 7 ? '🏆 Champion' : p >= 4 ? '🎤 Debater' : '🌱 Rookie'; }
 
-function finish() {
-  resetTimer();
-  const base = visibleTotal(), total = base + state.bonus, n = state.rounds.length;
-  const avgTime = n ? state.rounds.reduce((s, r) => s + r.time, 0) / n : 0;
-  const h = load('tk_history', []);
-  h.push({ date: new Date().toISOString(), name: state.name, rounds: n, avgTime, bonus: state.bonus, total });
-  save('tk_history', h);
-
-  $('finalName').textContent = state.name;
-  $('finalTotal').textContent = base;
-  $('finalTitle').textContent = titleFor(base, n);
-  $('giftZone').classList.remove('hidden');
-  $('gift').className = 'gift'; $('drum').textContent = "Teacher's note… click the gift!";
-  $('bonusZone').innerHTML = '';
-
-  const body = $('summaryBody'); body.innerHTML = '';
-  state.rounds.forEach((r, i) => {
-    const tr = document.createElement('tr');
-    [i + 1, r.q, r.choice, LEVELS[r.level].label, `${fmt(r.time)} / ${fmt(r.goal)}`, r.points].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+$('showResults').onclick = () => {
+  const pts = roundPoints(), [a, b] = state.pairs[state.idx];
+  state.roundPts = pts;
+  $('resRound').textContent = `${state.name} · Round ${state.idx + 1}`;
+  $('resQuestion').textContent = `${a} or ${b} → ${state.choice === 'A' ? a : b}`;
+  $('resTotal').textContent = pts; $('resTitle').textContent = titleFor(pts);
+  $('giftZone').classList.remove('hidden'); $('gift').className = 'gift'; $('drum').textContent = "Teacher's note… click the gift!";
+  $('bonusZone').innerHTML = ''; $('gameTotalLine').classList.add('hidden'); $('afterButtons').classList.add('hidden');
+  const body = $('stageBody'); body.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const t = state.stageTimes[i], tr = document.createElement('tr');
+    [s.label, fmt(t || 0), fmt(s.goal), t <= s.goal / 2 ? '⚡ Lightning fast' : t <= s.goal ? '✅ In time' : '⏰ Over time'].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
     body.appendChild(tr);
   });
-  if (n) {
-    const best = state.rounds.reduce((m, r, i) => (r.points > state.rounds[m].points || (r.points === state.rounds[m].points && r.time > state.rounds[m].time)) ? i : m, 0);
-    const r = state.rounds[best];
-    $('bestRound').textContent = `⭐ Best round: #${best + 1}, ${r.q} (${fmt(r.time)}, ${r.points} pts)`;
-  } else $('bestRound').textContent = '';
-  drawChart(); show('final');
-}
+  show2('results');
+};
 
 $('gift').onclick = () => {
-  const gift = $('gift'); if (gift.classList.contains('shake')) return;
-  gift.classList.add('shake');
-  const steps = ['3…', '2…', '1…'];
-  steps.forEach((t, i) => setTimeout(() => $('drum').textContent = t, i * 700));
+  const gift = $('gift'); if (state.opened) return;
+  state.opened = true; gift.classList.add('shake');
+  ['3…', '2…', '1…'].forEach((t, i) => setTimeout(() => $('drum').textContent = t, i * 700));
   setTimeout(() => {
     gift.classList.remove('shake'); gift.classList.add('boom');
     setTimeout(() => {
@@ -488,36 +498,39 @@ $('gift').onclick = () => {
       const msg = state.bonusMsg ? `<div class="bonus-msg">“${escapeHtml(state.bonusMsg)}”</div>` : '';
       $('bonusZone').innerHTML = `<div class="bonus-pop">+${state.bonus}</div>${msg}`;
       burst();
-      countUp($('finalTotal'), visibleTotal(), visibleTotal() + state.bonus, 1200, () => {
-        $('finalTitle').textContent = titleFor(visibleTotal() + state.bonus, state.rounds.length);
+      const roundTotal = state.roundPts + state.bonus;
+      countUp($('resTotal'), state.roundPts, roundTotal, 1200, () => {
+        $('resTitle').textContent = titleFor(roundTotal);
+        state.gameTotal += roundTotal; state.bonusTotal += state.bonus; state.roundsDone++;
+        state.times.push(state.stageTimes.reduce((s, t) => s + (t || 0), 0));
+        $('gameTotal').textContent = state.gameTotal; $('gameTotalLine').classList.remove('hidden');
+        updateScore(); saveHistory();
+        const more = state.idx + 1 < state.pairs.length;
+        $('nextRound').classList.toggle('hidden', !more);
+        $('nextRound').textContent = `Play round ${state.idx + 2} ➜`;
+        $('afterButtons').classList.remove('hidden');
       });
     }, 450);
   }, 2100);
 };
+
+function saveHistory() {
+  const h = load('tk_history', []);
+  const avgTime = state.times.length ? state.times.reduce((s, t) => s + t, 0) / state.times.length : 0;
+  const entry = { id: state.id, date: new Date().toISOString(), name: state.name, rounds: state.roundsDone, avgTime, bonus: state.bonusTotal, total: state.gameTotal };
+  const i = h.findIndex(g => g.id === state.id);
+  if (i >= 0) h[i] = entry; else h.push(entry);
+  save('tk_history', h);
+}
+
+$('nextRound').onclick = () => { state.idx++; startRound(); show2('round'); };
+$('startAgain').onclick = () => show2('home');
 
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function countUp(el, from, to, ms, done) {
   const t0 = performance.now();
   (function step(t) { const p = Math.min(1, (t - t0) / ms); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); else if (done) done(); })(t0);
 }
-
-function drawChart() {
-  const svg = $('chart'), W = 700, H = 240, P = 40, rs = state.rounds;
-  if (!rs.length) { svg.innerHTML = `<text x="350" y="120" fill="#8e9bb8" text-anchor="middle">No rounds played</text>`; return; }
-  const max = Math.max(90, ...rs.map(r => r.time), ...rs.map(r => r.goal)) * 1.1;
-  const x = i => rs.length === 1 ? W / 2 : P + i * ((W - 2 * P) / (rs.length - 1));
-  const y = v => H - P - (v / max) * (H - 2 * P);
-  let out = '';
-  [0, 30, 60, 90, 120, 150, 180].filter(v => v <= max).forEach(v => {
-    out += `<line x1="${P}" x2="${W - 20}" y1="${y(v)}" y2="${y(v)}" stroke="#2a3550"/><text x="${P - 8}" y="${y(v) + 4}" fill="#8e9bb8" font-size="12" text-anchor="end">${fmt(v)}</text>`;
-  });
-  rs.forEach((r, i) => out += `<line x1="${x(i) - 14}" x2="${x(i) + 14}" y1="${y(r.goal)}" y2="${y(r.goal)}" stroke="#facc15" stroke-width="3"/>`);
-  if (rs.length > 1) out += `<polyline fill="none" stroke="#ef3b3b" stroke-width="3" points="${rs.map((r, i) => `${x(i)},${y(r.time)}`).join(' ')}"/>`;
-  rs.forEach((r, i) => out += `<circle cx="${x(i)}" cy="${y(r.time)}" r="7" fill="${r.time >= r.goal ? '#4ade80' : '#ef3b3b'}"/><text x="${x(i)}" y="${H - P + 20}" fill="#8e9bb8" font-size="12" text-anchor="middle">R${i + 1}</text>`);
-  out += `<text x="${W - 20}" y="16" fill="#facc15" font-size="12" text-anchor="end">— goal</text>`;
-  svg.innerHTML = out;
-}
-$('toHome').onclick = () => show('home');
 
 /* CONFETTI */
 const cv = $('confetti'), cx = cv.getContext('2d'); let parts = [];
